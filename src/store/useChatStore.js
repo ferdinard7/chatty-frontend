@@ -39,14 +39,17 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, messages } = get();
     try {
       const res = await axiosInstance.post(`/message/send-message/${selectedUser._id}`, messageData);
-      set({ messages: [...messages, res.data] });
+      // set({ messages: [...messages, res.data] });
+      const message = res.data.message;
+      if (!message.createdAt) message.createdAt = new Date().toISOString();
+      set({ messages: [...messages, message] });
     } catch (error) {
       toast.error(error.response.data.message);
     }
   },
 
   subscribeToMessages: () => {
-  const { selectedUser } = get();
+  const { selectedUser, messages } = get();
   if (!selectedUser) return;
 
   const socket = useAuthStore.getState().socket;
@@ -55,22 +58,25 @@ export const useChatStore = create((set, get) => ({
     return;
   }
 
-  // Remove existing listener before adding a new one
   socket.off("newMessage");
 
- socket.on("newMessage", (newMessage) => {
-  const authUser = useAuthStore.getState().authUser;
-  const selectedUser = get().selectedUser;
-  console.log("new message", newMessage);
+  socket.on("newMessage", (newMessage) => {
+  if (!newMessage?.text && !newMessage?.image) return;
 
-  const isIncomingFromSelectedUser = newMessage.senderId === selectedUser._id;
-  const isOutgoingToSelectedUser = newMessage.receiverId === selectedUser._id;
+  if (!newMessage.createdAt) newMessage.createdAt = new Date().toISOString();
 
-  if (!isIncomingFromSelectedUser && !isOutgoingToSelectedUser) return;
+  const currentSelected = get().selectedUser;
+  if (!currentSelected) return;
 
-  set({
-    messages: [...get().messages, newMessage],
-  });
+  const senderId = newMessage.senderId._id || newMessage.senderId;
+  const receiverId = newMessage.receiverId._id || newMessage.receiverId;
+
+  const isFromSelectedUser = senderId === currentSelected._id;
+  const isToSelectedUser = receiverId === currentSelected._id;
+
+  if (!isFromSelectedUser && !isToSelectedUser) return;
+
+  set({ messages: [...get().messages, newMessage] });
 });
 },
 unsubscribeFromMessages: () => {
