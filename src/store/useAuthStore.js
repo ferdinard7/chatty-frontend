@@ -4,7 +4,9 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
 // import.meta.env.MODE === "development" ?
-const BASE_URL ="http://localhost:3002";
+const BASE_URL ="https://message-service-rbga.onrender.com";
+// https://message-service-rbga.onrender.com
+// http://localhost:3002
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
